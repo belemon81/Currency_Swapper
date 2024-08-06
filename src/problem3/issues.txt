@@ -1,0 +1,38 @@
+1. @anti-patterns
+        FormattedWalletBalance and WalletBalance interfaces have 2 similar attributes
+        ----> Let make FormattedWalletBalance extends WalletBalance
+2. @computational-inefficiencies
+        'balancePriority' is defined (within sortedBalances()) to use, but mistakenly use 'lhsPriority'
+        ----> Use 'balancePriority'
+3. @computational-inefficiencies
+        'prices' is not used in useMemo()
+        ----> We can remove it & add 'getPriority' instead to increase efficiency
+4. @computational-inefficiencies
+        Conditions within filter() is illogic...? (balance.amount <= 0)
+        ----> balance.amount >= 0
+5. @computational-inefficiencies
+        sortedBalances return WalletBalance[]; while rows = sortedBalances.map(...) maps FormattedWalletBalance elements
+        ----> We can use row = formattedBalances.map(...) instead to increase efficiency
+
+
+// OTHER
+6. @syntax
+        BoxProps is undefined
+        ----> Let define it
+7. @syntax
+        Undefined 'children' is listed in props
+        ----> After defining BoxProps, add it
+8. @syntax
+        useWalletBalances() and usePrices() are undefined.
+        ----> Define it or directly use useState() within functional component.
+9. @syntax
+        'blockchain' attribute is missing within WalletBalance
+        ----> Add it to the interface
+10. @syntax
+        Undefined WalletRow
+        ----> Let define it (can add 'currency' to fulfill WalletRow role)
+11. @syntax
+        Undefined 'classes'
+        ----> Define it using @material-ui/styles, or just remove it
+
+
