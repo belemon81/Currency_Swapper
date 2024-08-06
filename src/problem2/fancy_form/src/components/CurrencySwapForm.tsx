@@ -1,29 +1,27 @@
 import React, {useEffect, useState} from "react";
-import {Currency, swapCurrency} from "./CurrencyResourceControl";
+import {Currency, CurrencyDropdown, swapCurrency} from "./CurrencyResourceControl";
 import axios from "axios";
-import {Button, Col, Container, Form, Row, Spinner} from "react-bootstrap";
+import {Button, Col, Container, Form, InputGroup, Row, Spinner} from "react-bootstrap";
+import './CurrencySwapForm.css'
 
 export const CurrencySwapForm: React.FC = () => {
     const [loading, setLoading] = useState(false);
     const [currencies, setCurrencies] = useState<Currency[]>([]);
     const [fromCurrency, setFromCurrency] = useState<Currency | null>(null);
     const [toCurrency, setToCurrency] = useState<Currency | null>(null);
-    const [fromAmount, setFromAmount] = useState<number>(0);
-    const [toAmount, setToAmount] = useState<number>(0);
-
-    const onSubmitForm = () => {
-        setLoading(true);
-
-        setLoading(false);
-    }
+    const [fromAmount, setFromAmount] = useState<string>('');
+    const [toAmount, setToAmount] = useState<string>('');
+    const [highlightEffect, setHighlightEffect] = useState(0);
+    const [validated, setValidated] = useState(false);
 
     useEffect(() => {
         const fetchCurrencies = async () => {
             setLoading(true);
             try {
                 const response = await axios.get('https://interview.switcheo.com/prices.json');
-                console.log(response.data)
                 setCurrencies(response.data);
+                setToCurrency(response.data[0]);
+                setFromCurrency(response.data[0]);
             } catch (error) {
                 console.log(error)
             } finally {
@@ -35,97 +33,116 @@ export const CurrencySwapForm: React.FC = () => {
 
     const handleFromAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        setFromAmount(parseFloat(value));
-        if (fromCurrency && toCurrency) {
-            const convertedAmount = swapCurrency({currencyType: fromCurrency, amount: fromAmount}, toCurrency)
-            setToAmount(parseFloat(convertedAmount.toFixed(4))); //
-        }
+        setFromAmount(value);
+        setToAmount('')
+        // if (fromCurrency && toCurrency && value) {
+        //     setToAmount(swapCurrency(value, fromCurrency, toCurrency).toFixed(4));
+        // }
     };
 
     const handleToAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
         const value = e.target.value;
-        setToAmount(parseFloat(value));
-        if (fromCurrency && toCurrency) {
-            const convertedAmount = swapCurrency({currencyType: fromCurrency, amount: toAmount}, fromCurrency)
-            setFromAmount(parseFloat(convertedAmount.toFixed(4)));
+        setToAmount(value);
+        setFromAmount('')
+        // if (fromCurrency && toCurrency && value) {
+        //     setFromAmount(swapCurrency(value, toCurrency, fromCurrency).toFixed(4));
+        // }
+    }
+
+    const createSparkles = () => {
+        const sparkles = [];
+        for (let i = 0; i < 5; i++) {
+            const style = {
+                top: `${Math.random() * 100}%`,
+                left: `${Math.random() * 100}%`,
+                animationDelay: `${Math.random() * 0.8}s`,
+            };
+            sparkles.push(<div key={i} className="sparkle" style={style} />);
+        }
+        return sparkles;
+    };
+
+    const handleSubmit = (event: { preventDefault: () => void; currentTarget: { checkValidity: () => any; }; }) => {
+        event.preventDefault()
+        if (!event.currentTarget.checkValidity()) {
+            setValidated(true);
+        } else {
+            setValidated(false);
+            setLoading(true);
+            setTimeout(() => {
+                setLoading(false);
+                if (fromCurrency && toCurrency && fromAmount) {
+                    setToAmount(swapCurrency(fromAmount, fromCurrency, toCurrency).toFixed(4));
+                    setHighlightEffect(2); // toAmount field
+                } else if (fromCurrency && toCurrency && toAmount) {
+                    setFromAmount(swapCurrency(toAmount, toCurrency, fromCurrency).toFixed(4))
+                    setHighlightEffect(1); // fromAmount field
+                }
+                setTimeout(() => {
+                    setHighlightEffect(0); // disable
+                }, 500);
+            }, 2000);
         }
     };
 
-    const handleSubmit = (e: React.FormEvent) => {
-        e.preventDefault();
-        setLoading(true);
-        setTimeout(() => {setLoading(false);}, 2000);
-    };
-
     return (
-        <Container>
-            <Form onSubmit={handleSubmit}>
-                <h2>Currency Swap Form</h2>
+        <Container className="swap-box" fluid>
+            <Form noValidate validated={validated}  onSubmit={handleSubmit} className="swap-form">
+                <h2 className="swap-title">Currency Swap Engine</h2>
                 <Row>
                     <Col>
-                        <Form.Group>
-                            <Form.Label>From Currency</Form.Label>
-                            <Form.Select
-                                value={fromCurrency?.currency}
-                                onChange={(e) =>
-                                    setFromCurrency(currencies.find((c) => c.currency === e.target.value) || null)
-                                }
-                            >
-                                {currencies.map((currency) => (
-                                    <option key={currency.currency} value={currency.currency}>
-                                        {currency.currency}
-                                    </option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
+                        <CurrencyDropdown
+                            currencies={currencies}
+                            selectedCurrency={fromCurrency}
+                            onSelect={setFromCurrency}
+                            label="From Currency"
+                        />
                     </Col>
                     <Col>
-                        <Form.Group>
-                            <Form.Label>To Currency</Form.Label>
-                            <Form.Select
-                                value={toCurrency?.currency}
-                                onChange={(e) =>
-                                    setToCurrency(currencies.find((c) => c.currency === e.target.value) || null)
-                                }
-                            >
-                                {currencies.map((currency) => (
-                                    <option key={currency.currency} value={currency.currency}>
-                                        {currency.currency}
-                                    </option>
-                                ))}
-                            </Form.Select>
-                        </Form.Group>
+                        <CurrencyDropdown
+                            currencies={currencies}
+                            selectedCurrency={toCurrency}
+                            onSelect={setToCurrency}
+                            label="To Currency"
+                        />
                     </Col>
                 </Row>
                 <Row>
-                    <Col>
-                        <Form.Group>
-                            <Form.Label>Amount to Send</Form.Label>
+                        <Form.Group as={Col} className={highlightEffect === 1 ? 'highlight-effect' : ''}>
+                            <Form.Label className="swap-label">Amount to send</Form.Label>
                             <Form.Control
                                 type="number"
                                 value={fromAmount}
                                 onChange={handleFromAmountChange}
                                 placeholder="Enter amount"
+                                step="any"
+                                min="0.0001"
                             />
+                            <Form.Control.Feedback type="invalid">Amount should be more than 0</Form.Control.Feedback>
+                            {highlightEffect === 1 && createSparkles()}
                         </Form.Group>
-                    </Col>
-                    <Col>
-                        <Form.Group>
-                            <Form.Label>Amount to Receive</Form.Label>
+                        <Form.Group as={Col} className={highlightEffect === 2 ? 'highlight-effect' : ''}>
+                            <Form.Label className="swap-label">Amount to receive</Form.Label>
+                            <InputGroup hasValidation>
                             <Form.Control
                                 type="number"
                                 value={toAmount}
                                 onChange={handleToAmountChange}
                                 placeholder="Enter amount"
+                                step="any"
+                                min="0.0001"
                             />
+                            <Form.Control.Feedback type="invalid">Amount should be more than 0</Form.Control.Feedback>
+                            </InputGroup>
+                            {highlightEffect === 2 && createSparkles()}
                         </Form.Group>
-                    </Col>
                 </Row>
-                <div className="d-flex justify-content-center">
+                <div>
                     <Button
                         variant="primary"
                         type="submit"
                         disabled={loading}
+                        className="swap-btn"
                     >
                         {loading ? (
                             <>
@@ -135,8 +152,7 @@ export const CurrencySwapForm: React.FC = () => {
                                     size="sm"
                                     role="status"
                                     aria-hidden="true"
-                                />
-                                Swapping...
+                                /> Swapping...
                             </>
                         ) : (
                             "Confirm Swap"
@@ -146,16 +162,4 @@ export const CurrencySwapForm: React.FC = () => {
             </Form>
         </Container>
     );
-// return (
-    //     <form onSubmit={onSubmitForm}>
-    //         <h5>Swap</h5>
-    //         <label htmlFor="input-amount">Amount to send</label>
-    //         <input id="input-amount"/>
-    //
-    //         <label htmlFor="output-amount">Amount to receive</label>
-    //         <input id="output-amount"/>
-    //
-    //         <button>CONFIRM SWAP</button>
-    //     </form>
-    // );
 }
